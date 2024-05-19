@@ -47,6 +47,10 @@ class WDSToolbarButtonsWidget extends BaseWidget<
     return config.anvilConfig;
   }
 
+  static getMethods() {
+    return config.methodsConfig;
+  }
+
   onButtonClick = (
     onClick: string | undefined,
     callback?: (result: ExecutionResult) => void,
@@ -68,12 +72,12 @@ class WDSToolbarButtonsWidget extends BaseWidget<
   getWidgetView() {
     return (
       <ToolbarButtonsComponent
+        alignment={this.props.alignment}
         buttonsList={this.props.buttonsList}
         color={this.props.buttonColor}
         density={this.props.density}
         key={this.props.widgetId}
         onButtonClick={this.onButtonClick}
-        orientation={this.props.orientation}
         variant={this.props.buttonVariant}
       />
     );

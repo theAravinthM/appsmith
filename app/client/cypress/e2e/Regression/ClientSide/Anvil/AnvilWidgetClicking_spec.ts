@@ -18,7 +18,6 @@ describe(
       // intercept features call for Anvil + WDS tests
       featureFlagIntercept({
         release_anvil_enabled: true,
-        ab_wds_enabled: true,
       });
       // Cleanup the canvas before each test
       agHelper.SelectAllWidgets();
@@ -67,7 +66,7 @@ describe(
       cy.get(`${anvilLayout.mainCanvasSelector}`).within(() => {
         // For each widget check if the border-color is transparent
         // The border-color changes if a widget is selected or focused.
-        cy.get(".anvil-widget-wrapper").each(($widget) => {
+        cy.get("[data-testid=t--anvil-widget-wrapper]").each(($widget) => {
           cy.wrap($widget).should(
             "have.css",
             "outline-color",

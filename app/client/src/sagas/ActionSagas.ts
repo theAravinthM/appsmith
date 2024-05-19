@@ -25,9 +25,11 @@ import type { ApiResponse } from "api/ApiResponses";
 import type { FetchPageRequest, FetchPageResponse } from "api/PageApi";
 import PageApi from "api/PageApi";
 import { updateCanvasWithDSL } from "@appsmith/sagas/PageSagas";
-import type {
-  FetchActionsPayload,
-  SetActionPropertyPayload,
+import {
+  closeQueryActionTab,
+  closeQueryActionTabSuccess,
+  type FetchActionsPayload,
+  type SetActionPropertyPayload,
 } from "actions/pluginActionActions";
 import {
   copyActionError,
@@ -48,7 +50,7 @@ import { getDynamicBindingsChangesSaga } from "utils/DynamicBindingUtils";
 import { validateResponse } from "./ErrorSagas";
 import { transformRestAction } from "transformers/RestActionTransformer";
 import { getCurrentPageId } from "selectors/editorSelectors";
-import AnalyticsUtil from "utils/AnalyticsUtil";
+import AnalyticsUtil from "@appsmith/utils/AnalyticsUtil";
 import type {
   Action,
   ActionViewMode,
@@ -134,9 +136,7 @@ import { getDefaultTemplateActionConfig } from "utils/editorContextUtils";
 import { sendAnalyticsEventSaga } from "./AnalyticsSaga";
 import { EditorModes } from "components/editorComponents/CodeEditor/EditorConfig";
 import { updateActionAPICall } from "@appsmith/sagas/ApiCallerSagas";
-import { getIsServerDSLMigrationsEnabled } from "selectors/pageSelectors";
 import FocusRetention from "./FocusRetentionSaga";
-import { getIsEditorPaneSegmentsEnabled } from "@appsmith/selectors/featureFlagsSelectors";
 import { resolveParentEntityMetadata } from "@appsmith/sagas/helpers";
 import { handleQueryEntityRedirect } from "./IDESaga";
 import { EditorViewMode, IDE_TYPE } from "@appsmith/entities/IDE/constants";
@@ -146,6 +146,7 @@ import {
   setShowQueryCreateNewModal,
 } from "actions/ideActions";
 import { getIsSideBySideEnabled } from "selectors/ideSelectors";
+import { CreateNewActionKey } from "@appsmith/entities/Engine/actionHelpers";
 
 export const DEFAULT_PREFIX = {
   QUERY: "Query",
@@ -232,8 +233,8 @@ export function* createDefaultActionPayload({
       plugin?.type === PluginType.API
         ? defaultApiActionConfig
         : !!defaultActionConfig
-        ? defaultActionConfig
-        : {},
+          ? defaultActionConfig
+          : {},
     name: newActionName,
   };
 
@@ -624,11 +625,8 @@ export function* deleteActionSaga(
       });
     }
     yield call(FocusRetention.handleRemoveFocusHistory, currentUrl);
-    const isEditorPaneSegmentsEnabled: boolean = yield select(
-      getIsEditorPaneSegmentsEnabled,
-    );
 
-    if (isEditorPaneSegmentsEnabled && ideType === IDE_TYPE.App) {
+    if (ideType === IDE_TYPE.App) {
       yield call(handleQueryEntityRedirect, action.id);
     } else {
       if (!!actionPayload.payload.onSuccess) {
@@ -657,6 +655,7 @@ export function* deleteActionSaga(
     });
 
     yield put(deleteActionSuccess({ id }));
+    yield put(closeQueryActionTabSuccess({ id, parentId: pageId }));
   } catch (error) {
     yield put({
       type: ReduxActionErrorTypes.DELETE_ACTION_ERROR,
@@ -677,12 +676,18 @@ function* moveActionSaga(
     yield select(getAction, action.payload.id),
     `Action not found for id - ${action.payload.id}`,
   );
+  const newName: string = yield select(getNewEntityName, {
+    prefix: action.payload.name,
+    parentEntityId: action.payload.destinationPageId,
+    parentEntityKey: CreateNewActionKey.PAGE,
+    startWithoutIndex: true,
+  });
   try {
     const response: ApiResponse = yield ActionAPI.moveAction({
       action: {
         ...actionObject,
         pageId: action.payload.originalPageId,
-        name: action.payload.name,
+        name: newName,
       },
       destinationPageId: action.payload.destinationPageId,
     });
@@ -710,8 +715,13 @@ function* moveActionSaga(
       // @ts-expect-error: response is of type unknown
       apiID: response.data.id,
     });
-    const currentUrl = window.location.pathname;
-    yield call(FocusRetention.handleRemoveFocusHistory, currentUrl);
+    yield call(
+      closeActionTabSaga,
+      closeQueryActionTab({
+        id: action.payload.id,
+        parentId: action.payload.originalPageId,
+      }),
+    );
     // @ts-expect-error: response is of type unknown
     yield put(moveActionSuccess(response.data));
   } catch (e) {
@@ -731,6 +741,13 @@ function* copyActionSaga(
   action: ReduxAction<{ id: string; destinationPageId: string; name: string }>,
 ) {
   let actionObject: Action = yield select(getAction, action.payload.id);
+  const newName: string = yield select(getNewEntityName, {
+    prefix: action.payload.name,
+    parentEntityId: action.payload.destinationPageId,
+    parentEntityKey: CreateNewActionKey.PAGE,
+    suffix: "Copy",
+    startWithoutIndex: true,
+  });
   try {
     if (!actionObject) throw new Error("Could not find action to copy");
     // At this point the actionObject.id will be the id of the action to be copied
@@ -741,7 +758,7 @@ function* copyActionSaga(
     ) as Action;
 
     const copyAction = Object.assign({}, actionObject, {
-      name: action.payload.name,
+      name: newName,
       pageId: action.payload.destinationPageId,
     }) as Partial<Action>;
 
@@ -819,11 +836,7 @@ export function* refactorActionName(
     { actionId: id },
   );
 
-  const isServerDSLMigrationsEnabled = select(getIsServerDSLMigrationsEnabled);
-  const params: FetchPageRequest = { id: pageId };
-  if (isServerDSLMigrationsEnabled) {
-    params.migrateDSL = true;
-  }
+  const params: FetchPageRequest = { id: pageId, migrateDSL: true };
   const pageResponse: FetchPageResponse = yield call(PageApi.fetchPage, params);
   // check if page request is successful
   const isPageRequestSuccessful: boolean = yield validateResponse(pageResponse);
@@ -1004,39 +1017,38 @@ function* toggleActionExecuteOnLoadSaga(
   }
 }
 
-function* handleMoveOrCopySaga(actionPayload: ReduxAction<{ id: string }>) {
-  const { id } = actionPayload.payload;
-  const action: Action = yield select(getAction, id);
-  const isApi = action.pluginType === PluginType.API;
-  const isQuery = action.pluginType === PluginType.DB;
-  const isSaas = action.pluginType === PluginType.SAAS;
+function* handleMoveOrCopySaga(actionPayload: ReduxAction<Action>) {
+  const { id, pageId, pluginId, pluginType } = actionPayload.payload;
+  const isApi = pluginType === PluginType.API;
+  const isQuery = pluginType === PluginType.DB;
+  const isSaas = pluginType === PluginType.SAAS;
 
   if (isApi) {
     history.push(
       apiEditorIdURL({
-        pageId: action.pageId,
-        apiId: action.id,
+        pageId: pageId,
+        apiId: id,
       }),
     );
   }
   if (isQuery) {
     history.push(
       queryEditorIdURL({
-        pageId: action.pageId,
-        queryId: action.id,
+        pageId: pageId,
+        queryId: id,
       }),
     );
   }
   if (isSaas) {
     const plugin = shouldBeDefined<Plugin>(
-      yield select(getPlugin, action.pluginId),
-      `Plugin not found for pluginId - ${action.pluginId}`,
+      yield select(getPlugin, pluginId),
+      `Plugin not found for pluginId - ${pluginId}`,
     );
     history.push(
       saasEditorApiIdURL({
-        pageId: action.pageId,
+        pageId: pageId,
         pluginPackageName: plugin.packageName,
-        apiId: action.id,
+        apiId: id,
       }),
     );
   }
@@ -1154,6 +1166,7 @@ export function* watchActionSagas() {
     takeEvery(ReduxActionTypes.CREATE_ACTION_INIT, createActionSaga),
     takeLatest(ReduxActionTypes.UPDATE_ACTION_INIT, updateActionSaga),
     takeLatest(ReduxActionTypes.DELETE_ACTION_INIT, deleteActionSaga),
+    takeLatest(ReduxActionTypes.CLOSE_QUERY_ACTION_TAB, closeActionTabSaga),
     takeLatest(ReduxActionTypes.BIND_DATA_ON_CANVAS, bindDataOnCanvasSaga),
     takeLatest(ReduxActionTypes.SAVE_ACTION_NAME_INIT, saveActionName),
     takeLatest(ReduxActionTypes.MOVE_ACTION_INIT, moveActionSaga),
@@ -1180,4 +1193,17 @@ export function* watchActionSagas() {
       handleCreateNewQueryFromActionCreator,
     ),
   ]);
+}
+
+export function* closeActionTabSaga(
+  actionPayload: ReduxAction<{
+    id: string;
+    parentId: string;
+  }>,
+) {
+  const { id, parentId } = actionPayload.payload;
+  const currentUrl = window.location.pathname;
+  yield call(FocusRetention.handleRemoveFocusHistory, currentUrl);
+  yield call(handleQueryEntityRedirect, id);
+  yield put(closeQueryActionTabSuccess({ id, parentId }));
 }

@@ -1,3 +1,4 @@
+import { UNUSED_ENV_ID } from "constants/EnvironmentContants";
 import type { Datasource } from "entities/Datasource";
 import type { CanvasStructure } from "reducers/uiReducers/pageCanvasStructureReducer";
 
@@ -168,7 +169,7 @@ export const mockAppDSProps: Datasource[] = [
     datasourceStorages: {
       unused_env: {
         datasourceId: "659febdcd0cbfb0c5e0a7457",
-        environmentId: "unused_env",
+        environmentId: UNUSED_ENV_ID,
         datasourceConfiguration: {
           url: "string",
           connection: {
@@ -216,7 +217,7 @@ export const mockAppDSProps: Datasource[] = [
     datasourceStorages: {
       unused_env: {
         datasourceId: "659f81c8d0cbfb0c5e0a743c",
-        environmentId: "unused_env",
+        environmentId: UNUSED_ENV_ID,
         datasourceConfiguration: {
           url: "string",
           connection: {
@@ -2414,7 +2415,7 @@ export const defaultAppState = {
             unused_env: {
               id: "659febdcd0cbfb0c5e0a7458",
               datasourceId: "659febdcd0cbfb0c5e0a7457",
-              environmentId: "unused_env",
+              environmentId: UNUSED_ENV_ID,
               datasourceConfiguration: {
                 connection: {
                   mode: "READ_WRITE",
@@ -2472,7 +2473,7 @@ export const defaultAppState = {
             unused_env: {
               id: "659f81c8d0cbfb0c5e0a743d",
               datasourceId: "659f81c8d0cbfb0c5e0a743c",
-              environmentId: "unused_env",
+              environmentId: UNUSED_ENV_ID,
               datasourceConfiguration: {
                 connection: {
                   mode: "READ_WRITE",
@@ -3361,7 +3362,7 @@ export const defaultAppState = {
           actionUiConfig: {
             editor: [
               {
-                label: "Commands",
+                label: "Command",
                 description: "Select the method to run",
                 configProperty: "actionConfiguration.formData.command",
                 controlType: "DROP_DOWN",
@@ -6803,7 +6804,7 @@ export const defaultAppState = {
           actionUiConfig: {
             editor: [
               {
-                label: "Commands",
+                label: "Command",
                 description: "Select the method to run",
                 configProperty: "actionConfiguration.formData.command",
                 controlType: "DROP_DOWN",
@@ -7004,8 +7005,7 @@ export const defaultAppState = {
                     isRequired: true,
                     label: "Message SID",
                     placeholderText: "MMXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-                    subtitle:
-                      "Specify the SID of the messaging Service used with the message.",
+                    subtitle: "Specify the SID of the message.",
                     tooltipText:
                       "The Twilio-provided string that uniquely identifies the message resource to fetch.",
                   },
@@ -7097,8 +7097,7 @@ export const defaultAppState = {
                     isRequired: true,
                     tooltipText:
                       "The Twilio-provided string that uniquely identifies the message resource to fetch.",
-                    subtitle:
-                      "Specify the SID of the messaging Service used with the message.",
+                    subtitle: "Specify the SID of the message.",
                     label: "Message SID",
                     placeholderText: "SMXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
                     configProperty: "actionConfiguration.formData.MESSAGE_SID",
@@ -7133,8 +7132,7 @@ export const defaultAppState = {
                     isRequired: true,
                     label: "Message SID",
                     placeholderText: "MMXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-                    subtitle:
-                      "Specify the SID of the messaging Service used with the message.",
+                    subtitle: "Specify the SID of the message.",
                     tooltipText:
                       "The Twilio-provided string that uniquely identifies the message resource to delete.",
                   },
@@ -7217,7 +7215,7 @@ export const defaultAppState = {
           actionUiConfig: {
             editor: [
               {
-                label: "Commands",
+                label: "Command",
                 description: "Select the method to run",
                 configProperty: "actionConfiguration.formData.command",
                 controlType: "DROP_DOWN",
@@ -9186,7 +9184,7 @@ export const defaultAppState = {
             identifier: "SELECTOR",
             children: [
               {
-                label: "Commands",
+                label: "Command",
                 description:
                   "Choose method you would like to use to query the database",
                 configProperty: "actionConfiguration.formData.command.data",
@@ -10281,10 +10279,10 @@ export const defaultAppState = {
         useCase: "personal project",
         enableTelemetry: true,
         roles: [
-          "Upgrade to business edition to access roles and groups for conditional business logic",
+          "Upgrade to business plan to access roles and groups for conditional business logic",
         ],
         groups: [
-          "Upgrade to business edition to access roles and groups for conditional business logic",
+          "Upgrade to business plan to access roles and groups for conditional business logic",
         ],
         emptyInstance: false,
         accountNonExpired: true,
@@ -11121,8 +11119,10 @@ export const defaultAppState = {
         isFetchingAllUsers: false,
       },
       partialImportExport: {
+        isExportModalOpen: false,
         isExporting: false,
         isExportDone: false,
+        isImportModalOpen: false,
         isImporting: false,
         isImportDone: false,
       },
@@ -12707,10 +12707,10 @@ export const defaultAppState = {
           useCase: "personal project",
           enableTelemetry: true,
           roles: [
-            "Upgrade to business edition to access roles and groups for conditional business logic",
+            "Upgrade to business plan to access roles and groups for conditional business logic",
           ],
           groups: [
-            "Upgrade to business edition to access roles and groups for conditional business logic",
+            "Upgrade to business plan to access roles and groups for conditional business logic",
           ],
           emptyInstance: false,
           accountNonExpired: true,
@@ -12731,10 +12731,10 @@ export const defaultAppState = {
         useCase: "personal project",
         enableTelemetry: true,
         roles: [
-          "Upgrade to business edition to access roles and groups for conditional business logic",
+          "Upgrade to business plan to access roles and groups for conditional business logic",
         ],
         groups: [
-          "Upgrade to business edition to access roles and groups for conditional business logic",
+          "Upgrade to business plan to access roles and groups for conditional business logic",
         ],
         emptyInstance: false,
         accountNonExpired: true,
@@ -12754,28 +12754,22 @@ export const defaultAppState = {
           release_appnavigationlogoupload_enabled: false,
           release_embed_hide_share_settings_enabled: false,
           ab_gsheet_schema_enabled: true,
-          ab_wds_enabled: false,
           release_table_serverside_filtering_enabled: false,
-          release_custom_echarts_enabled: false,
           license_branding_enabled: false,
           license_sso_saml_enabled: false,
           license_sso_oidc_enabled: false,
-          deprecate_custom_fusioncharts_enabled: false,
           ab_mock_mongo_schema_enabled: true,
           license_private_embeds_enabled: false,
           release_show_publish_app_to_community_enabled: false,
           license_gac_enabled: false,
           release_anvil_enabled: false,
-          ab_show_templates_instead_of_blank_canvas_enabled: true,
           release_app_sidebar_enabled: false,
-          release_server_dsl_migrations_enabled: false,
           license_git_branch_protection_enabled: false,
           release_git_autocommit_feature_enabled: true,
           license_widget_rtl_support_enabled: false,
           release_show_new_sidebar_announcement_enabled: false,
           rollout_app_sidebar_enabled: false,
           release_show_partial_import_export_enabled: true,
-          release_show_new_sidebar_pages_pane_enabled: false,
           ab_one_click_learning_popover_enabled: false,
           release_side_by_side_ide_enabled: false,
           release_global_add_pane_enabled: false,

@@ -4,7 +4,7 @@ import { DATASOURCE_REST_API_FORM } from "@appsmith/constants/forms";
 import type { Datasource } from "entities/Datasource";
 import type { InjectedFormProps } from "redux-form";
 import { getFormMeta, reduxForm } from "redux-form";
-import AnalyticsUtil from "utils/AnalyticsUtil";
+import AnalyticsUtil from "@appsmith/utils/AnalyticsUtil";
 import FormControl from "pages/Editor/FormControl";
 import { StyledInfo } from "components/formControls/InputTextControl";
 import { connect } from "react-redux";
@@ -771,7 +771,9 @@ class DatasourceRestAPIEditor extends React.Component<Props> {
           </FormInputContainer>
         )}
         {isConnectSelfSigned && (
-          <FormInputContainer data-location-id={btoa("selfsignedcert")}>
+          <FormInputContainer
+            data-location-id={btoa("authentication.useSelfSignedCert")}
+          >
             {this.renderCheckboxViaFormControl(
               "authentication.useSelfSignedCert",
               "Use Self-Signed Certificate for Authorization requests",

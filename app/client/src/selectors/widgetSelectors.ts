@@ -22,7 +22,7 @@ import { getIsTableFilterPaneVisible } from "selectors/tableFilterSelectors";
 import { getIsAutoHeightWithLimitsChanging } from "utils/hooks/autoHeightUIHooks";
 import { getIsPropertyPaneVisible } from "./propertyPaneSelectors";
 import { combinedPreviewModeSelector } from "./editorSelectors";
-import { selectFeatureFlags } from "@appsmith/selectors/featureFlagsSelectors";
+import { getIsAnvilLayout } from "layoutSystems/anvil/integrations/selectors";
 
 export const getIsDraggingOrResizing = (state: AppState) =>
   state.ui.widgetDragResize.isResizing || state.ui.widgetDragResize.isDragging;
@@ -35,10 +35,10 @@ const getCanvasWidgets = (state: AppState) => state.entities.canvasWidgets;
 // A selector that gets the modal widget type based on the feature flag
 // This will need to be updated once Anvil and WDS are generally available
 export const getModalWidgetType = createSelector(
-  selectFeatureFlags,
-  (flags) => {
+  getIsAnvilLayout,
+  (isAnvilLayout: boolean) => {
     let modalWidgetType = "MODAL_WIDGET";
-    if (flags.ab_wds_enabled) {
+    if (isAnvilLayout) {
       modalWidgetType = "WDS_MODAL_WIDGET";
     }
     return modalWidgetType;
@@ -65,7 +65,7 @@ export const getModalDropdownList = createSelector(
     return modalWidgets.map((widget: FlattenedWidgetProps) => ({
       id: widget.widgetId,
       label: widget.widgetName,
-      value: `${widget.widgetName}`,
+      value: `${widget.widgetName}.name`,
     }));
   },
 );
@@ -119,7 +119,7 @@ export const isWidgetSelected = (widgetId: string) => {
   );
 };
 
-export const isCurrentWidgetFocused = (widgetId: string) => {
+export const isWidgetFocused = (widgetId: string) => {
   return createSelector(
     getFocusedWidget,
     (widget): boolean => widget === widgetId,

@@ -1,6 +1,7 @@
 package com.appsmith.server.exceptions;
 
 import com.appsmith.external.constants.AnalyticsEvents;
+import com.appsmith.external.constants.MDCConstants;
 import com.appsmith.external.exceptions.AppsmithErrorAction;
 import com.appsmith.external.exceptions.BaseException;
 import com.appsmith.external.exceptions.ErrorDTO;
@@ -8,7 +9,6 @@ import com.appsmith.external.exceptions.pluginExceptions.AppsmithPluginException
 import com.appsmith.server.constants.FieldName;
 import com.appsmith.server.dtos.ResponseDTO;
 import com.appsmith.server.exceptions.util.DuplicateKeyExceptionUtils;
-import com.appsmith.server.filters.MDCFilter;
 import com.appsmith.server.helpers.GitFileUtils;
 import com.appsmith.server.helpers.RedisUtils;
 import com.appsmith.server.services.AnalyticsService;
@@ -17,6 +17,7 @@ import io.micrometer.core.instrument.util.StringUtils;
 import io.sentry.Sentry;
 import io.sentry.SentryLevel;
 import io.sentry.protocol.User;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.jgit.api.errors.JGitInternalException;
 import org.eclipse.jgit.errors.LockFailedException;
@@ -28,6 +29,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.support.WebExchangeBindException;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.server.ServerWebExchange;
 import org.springframework.web.server.ServerWebInputException;
 import reactor.core.publisher.Mono;
@@ -44,6 +46,7 @@ import java.util.Map;
  * sending it to the client.
  */
 @ControllerAdvice
+@RequiredArgsConstructor
 @Slf4j
 public class GlobalExceptionHandler {
 
@@ -54,17 +57,6 @@ public class GlobalExceptionHandler {
     private final GitFileUtils fileUtils;
 
     private final SessionUserService sessionUserService;
-
-    public GlobalExceptionHandler(
-            RedisUtils redisUtils,
-            AnalyticsService analyticsService,
-            GitFileUtils fileUtils,
-            SessionUserService sessionUserService) {
-        this.redisUtils = redisUtils;
-        this.analyticsService = analyticsService;
-        this.fileUtils = fileUtils;
-        this.sessionUserService = sessionUserService;
-    }
 
     private void doLog(Throwable error) {
         if (error instanceof BaseException baseException && baseException.isHideStackTraceInLogs()) {
@@ -97,7 +89,7 @@ public class GlobalExceptionHandler {
                     scope.setExtra("downstreamErrorCode", baseError.getDownstreamErrorCode());
                 });
                 final User user = new User();
-                user.setEmail(baseError.getContextMap().getOrDefault(MDCFilter.USER_EMAIL, "unknownUser"));
+                user.setEmail(baseError.getContextMap().getOrDefault(MDCConstants.USER_EMAIL, "unknownUser"));
                 Sentry.setUser(user);
                 Sentry.captureException(error);
             }
@@ -284,6 +276,17 @@ public class GlobalExceptionHandler {
         return getResponseDTOMono(urlPath, response);
     }
 
+    @ExceptionHandler
+    @ResponseBody
+    public Mono<ResponseDTO<Void>> catchResponseStatusException(ResponseStatusException e, ServerWebExchange exchange) {
+        exchange.getResponse().setStatusCode(e.getStatusCode());
+
+        String urlPath = exchange.getRequest().getPath().toString();
+        ResponseDTO<Void> response = new ResponseDTO<>(e.getStatusCode().value(), null, e.getMessage(), false);
+
+        return getResponseDTOMono(urlPath, response);
+    }
+
     /**
      * This function catches the generic Exception class and is meant to be a catch all to ensure that we don't leak
      * any information to the client. Ideally, the function #catchAppsmithException should be used
@@ -369,7 +372,7 @@ public class GlobalExceptionHandler {
         return getResponseDTOMono(urlPath, response);
     }
 
-    private Mono<ResponseDTO<ErrorDTO>> getResponseDTOMono(String urlPath, ResponseDTO<ErrorDTO> response) {
+    private <T> Mono<ResponseDTO<T>> getResponseDTOMono(String urlPath, ResponseDTO<T> response) {
         if (urlPath.contains("/git") && urlPath.contains("/app")) {
             String appId = getAppIdFromUrlPath(urlPath);
             if (StringUtils.isEmpty(appId)) {

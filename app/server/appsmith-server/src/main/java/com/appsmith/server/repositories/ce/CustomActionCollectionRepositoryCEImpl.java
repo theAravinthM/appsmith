@@ -7,16 +7,21 @@ import com.appsmith.server.acl.AclPermission;
 import com.appsmith.server.constants.FieldName;
 import com.appsmith.server.domains.ActionCollection;
 import com.appsmith.server.dtos.ActionCollectionDTO;
+import com.appsmith.server.exceptions.AppsmithError;
+import com.appsmith.server.exceptions.AppsmithException;
 import com.appsmith.server.helpers.ce.bridge.Bridge;
 import com.appsmith.server.helpers.ce.bridge.BridgeQuery;
 import com.appsmith.server.repositories.BaseAppsmithRepositoryImpl;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.query.UpdateDefinition;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.util.List;
 import java.util.Optional;
+
+import static com.appsmith.external.helpers.StringUtils.dotted;
 
 public class CustomActionCollectionRepositoryCEImpl extends BaseAppsmithRepositoryImpl<ActionCollection>
         implements CustomActionCollectionRepositoryCE {
@@ -82,7 +87,7 @@ public class CustomActionCollectionRepositoryCEImpl extends BaseAppsmithReposito
          */
         BridgeQuery<ActionCollection> bridgeQuery = Bridge.query();
         if (!StringUtils.isEmpty(branchName)) {
-            bridgeQuery.equal(FieldName.DEFAULT_RESOURCES + "." + FieldName.BRANCH_NAME, branchName);
+            bridgeQuery.equal(ActionCollection.Fields.defaultResources_branchName, branchName);
         }
 
         // Fetch published actions
@@ -93,8 +98,7 @@ public class CustomActionCollectionRepositoryCEImpl extends BaseAppsmithReposito
             }
 
             if (pageIds != null && !pageIds.isEmpty()) {
-                String pageIdFieldPath = String.join(
-                        ".",
+                String pageIdFieldPath = dotted(
                         ActionCollection.Fields.publishedCollection,
                         ActionCollectionDTO.Fields.defaultResources,
                         DefaultResources.Fields.pageId);
@@ -108,8 +112,7 @@ public class CustomActionCollectionRepositoryCEImpl extends BaseAppsmithReposito
             }
 
             if (pageIds != null && !pageIds.isEmpty()) {
-                String pageIdFieldPath = String.join(
-                        ".",
+                String pageIdFieldPath = dotted(
                         ActionCollection.Fields.unpublishedCollection,
                         ActionCollectionDTO.Fields.defaultResources,
                         DefaultResources.Fields.pageId);
@@ -239,5 +242,13 @@ public class CustomActionCollectionRepositoryCEImpl extends BaseAppsmithReposito
         }
 
         return queryBuilder().criteria(query).permission(permission).all();
+    }
+
+    @Override
+    public Mono<Integer> updateById(String id, UpdateDefinition updateObj) {
+        if (id == null) {
+            return Mono.error(new AppsmithException(AppsmithError.INVALID_PARAMETER, FieldName.ID));
+        }
+        return queryBuilder().byId(id).updateFirst(updateObj);
     }
 }
